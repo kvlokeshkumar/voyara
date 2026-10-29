@@ -1,0 +1,289 @@
+VOYARA - PROJECT KNOWLEDGE BASE
+================================
+Purpose of this file: let someone with no prior context understand, run and rebuild the project.
+Everything below was taken from the repository contents (code, SQL, SAM template, scripts, docs).
+Items that could not be confirmed from the repository are listed under "Open questions" (section 12).
+
+
+1. PROJECT OVERVIEW
+-------------------
+Name: Voyara - a cloud-based travel planning and budget management system on AWS.
+Course context: Cloud Architecture Design (BCSE355L), team project. The emphasis is on how the application uses AWS services, not on application features.
+
+What it does
+  A signed-in user plans trips, sets a total and per-category budget, records expenses, builds a day-by-day itinerary with planned costs, sees spent / remaining / percent used, gets an amber warning at 80% and a red alert at 100% of the budget, and exports a CSV or PDF report. An administrator sees aggregate analytics.
+
+Problem solved
+  The original version was a browser-only React prototype that kept data in localStorage (single device, no accounts, no isolation between users). This version moves identity, API, compute, data and file storage to AWS so data is persistent, per-user, secured and monitored.
+
+Target users: travellers who want to plan trips and track spending (end users), and one or more administrators (members of the Cognito group "admins").
+
+Currency: INR, 2 decimal places. Dates: YYYY-MM-DD. Default AWS region: ap-south-1 (Mumbai).
+
+Status
+  - Backend, database schema, SAM template, frontend and deployment script are complete and were deployed and exercised on AWS.
+  - The frontend was run locally (http://localhost:3000) against the deployed AWS backend.
+  - No CloudFront distribution was created in the author's deployment because AWS required account verification first. The setup for it is described in docs/DEPLOYMENT.md but is not part of the SAM template.
+  - Recorded automated test results (see docs/TESTING.md): 67 backend tests and 23 frontend tests passed, production build compiled with warnings treated as errors.
+
+
+2. TECH STACK
+-------------
+Frontend
+  - React 19.2 (Create React App, react-scripts 5.0.1), react-router-dom 7.13, Chart.js 4.5 with react-chartjs-2 5.3, react-icons 5.6, amazon-cognito-identity-js 6.3.
+  - Tests: Jest + Testing Library (react 16.3, jest-dom 6.9, user-event 13.5).
+  - Node 20.x recommended by the docs (the app also built and ran on a newer Node release).
+Backend
+  - Python 3.12 on AWS Lambda (arm64, 256 MB; API timeout 15 s, migrate timeout 120 s).
+  - Runtime dependency: PyMySQL 1.1.1. boto3 comes from the Lambda runtime. The PDF and CSV report builders use only the standard library.
+  - Tests: pytest >= 8 and boto3 >= 1.34 (backend/requirements-dev.txt); a local MySQL 8.0 is needed.
+Database: Amazon RDS for MySQL 8 (utf8mb4, InnoDB).
+AWS services (12 in the written design): Cognito, API Gateway (HTTP API), Lambda, RDS, VPC with security groups and an S3 gateway endpoint, S3, CloudFront (documented, not in the template), CloudWatch (logs and alarms), SNS, IAM, CloudFormation/SAM, Budgets (the budget itself is created by hand per docs/DEPLOYMENT.md).
+Tooling: AWS CLI v2, AWS SAM CLI, bash (Git Bash on Windows), npm.
+Optional: an EC2 reporting script (reporting/export_summary.py).
+OS/hardware: any OS that runs Node, Python and the AWS CLI; no GPU or special hardware.
+
+
+3. FOLDER STRUCTURE
+-------------------
+voyara/
+  README.md                      Front page of the repository.
+  PROJECT_KNOWLEDGE.txt          This file.
+  DATA_README.md                 Describes the one large asset kept out of Git and the optional seed data.
+  .gitignore, .gitattributes     Ignore rules; *.sh files keep LF line endings.
+  frontend/                      React single-page application.
+    package.json, package-lock.json
+    .env.example                 Names of the three REACT_APP_* settings (placeholders only).
+    public/                      index.html, manifest, icons.
+    src/
+      index.js, App.js           Entry point and routes (public and protected).
+      config.js                  Reads REACT_APP_API_URL, REACT_APP_COGNITO_USER_POOL_ID, REACT_APP_COGNITO_CLIENT_ID.
+      auth/cognito.js            Sign-up, confirm, login (SRP), token refresh, sign-out. Tokens kept in sessionStorage.
+      auth/AuthContext.js        React context exposing the current user and the admin flag.
+      services/api.js            fetch wrapper that adds the ID token and maps errors; one method per API route.
+      utils/budgetMath.js        Client-side copy of the budget maths so the UI updates instantly.
+      components/                Navbar, Footer, ProtectedRoute, BudgetAlert (amber/red banner), Charts, Share, StatusViews.
+      hooks/useTripId.js         Reads ?tripId= from the URL, or opens the user's most recent trip.
+      pages/                     Home, About, Contact, LearnMore, login, signup, Planner, TripCreated, Itinerary, Budget, Dashboard, AdminPanel.
+      __tests__/pages.test.js, App.test.js, services/api.test.js
+      assets/                    Images used by the pages. screenrecord.mp4 is NOT in Git (see DATA_README.md).
+  backend/
+    src/
+      app.py                     Lambda entry point and router (regex route table).
+      common/                    db.py, auth.py, request.py, responses.py, errors.py, validation.py,
+                                 calculations.py, report_builder.py, alerts.py, aws.py.
+      handlers/                  trips, budgets, expenses, itinerary, summary, summary_service, common_queries,
+                                 reports, admin, migrate.
+      migrations/                V001__init.sql and seed/V900__seed_test_data.sql (copy of database/).
+      requirements.txt           PyMySQL only.
+    tests/                       pytest suites (calculations, validation, report builder, API + SQL integration).
+    pytest.ini, requirements-dev.txt, .env.example
+  database/
+    migrations/V001__init.sql    Source of truth for the schema.
+    seed/V900__seed_test_data.sql  Optional fake data.
+    scripts/create_app_user.sql.template
+  infra/
+    template.yaml                SAM/CloudFormation template.
+    samconfig.toml.example       Deploy defaults (copy to samconfig.toml; no passwords).
+  scripts/setup_aws.sh           One-shot setup script (described in section 8).
+  reporting/export_summary.py    Optional EC2/CLI report: per-trip spending CSV to S3, optional SNS alert.
+  docs/                          DEPLOYMENT.md, API.md, TESTING.md, COST_AND_CLEANUP.md, DEMO_SCRIPT.md, architecture.svg.
+
+Keep in sync: the SQL in database/migrations is copied into backend/src/migrations (a test fails if they differ). After editing a migration run: cp database/migrations/*.sql backend/src/migrations/
+
+
+4. ARCHITECTURE AND END-TO-END WORKFLOW
+---------------------------------------
+Components
+  Browser (React) -> Amazon Cognito (login) -> API Gateway HTTP API (JWT authorizer) -> Lambda in a VPC -> RDS MySQL (private)
+                                                                                                    \-> S3 reports bucket (through a free S3 gateway endpoint)
+  CloudWatch (logs, alarms) -> SNS topic -> email. IAM limits what the Lambda role can do. SAM/CloudFormation deploys the stack.
+
+Request flow
+  1. Sign-up: the browser calls Cognito (amazon-cognito-identity-js) with email, password and name. Cognito emails a 6-digit code; the user confirms it. Password policy: 8+ characters with upper case, lower case, number and symbol.
+  2. Login: SRP authentication; Cognito returns ID, access and refresh tokens. Tokens are stored in sessionStorage (cleared when the tab closes). Passwords are never stored.
+  3. Every API call sends Authorization: Bearer <ID token> (services/api.js). If there is no token or the API returns 401, the app redirects to /login.
+  4. API Gateway has one proxy route (ANY /{proxy+}) protected by a JWT authorizer (issuer = the user pool, audience = the app client id). A missing or invalid token returns 401 and the Lambda is not invoked.
+  5. A second route, OPTIONS /{proxy+}, has no authorizer. Browser CORS preflight requests carry no token; without this route the browser reports "Cannot reach the server".
+  6. The Lambda (app.lambda_handler) matches method + path against the route table. current_user() reads the verified claims from the request context (sub, email, name, cognito:groups), upserts a row in users, and sets role to admin when the "admins" group is present. Identity is never taken from the request body, query string or headers.
+  7. Handlers run parameterised SQL (PyMySQL, %s placeholders) against RDS. Every query is filtered by the owner; another user's id returns 404, not 403.
+  8. Reports: the Lambda builds a CSV or PDF in memory, writes it to S3 under reports/<cognito-sub>/<tripId>/trip-<id>-<timestamp>.<fmt> with SSE-S3, and returns a presigned download URL valid for 300 seconds.
+  9. Alerts: after an expense is added, if the budget status gets worse (ok -> warning -> exceeded) and the user enabled alerts, the Lambda tries to publish to SNS. The call is best-effort and never fails the request.
+  10. Logging: each request produces one JSON log line (method, path, status, ms, requestId) in CloudWatch Logs.
+
+Network design
+  - Lambda runs in the VPC subnets of the RDS instance with its own security group (no inbound rules).
+  - The RDS security group allows TCP 3306 only from the Lambda security group.
+  - No NAT Gateway. The Lambda reaches S3 through a free S3 gateway endpoint. It therefore cannot reach SNS (see limitations).
+
+Error format: { "error": { "code": "...", "message": "...", "field": "..." } } with status 400 (validation), 401, 403, 404, 405, 500, 503. Details in docs/API.md.
+
+
+5. DATA AND DATASETS
+--------------------
+There is no external dataset. All data is created by users and stored in MySQL.
+
+Schema (database/migrations/V001__init.sql)
+  schema_migrations(version PK, applied_at)
+  users(id, cognito_sub UNIQUE, email, name, role ENUM user|admin, created_at, updated_at)
+  trips(id, user_id FK, origin, destination, start_date, end_date, travelers, notes, timestamps)
+        CHECK end_date >= start_date; ON DELETE CASCADE from users
+  budgets(id, trip_id UNIQUE FK, total_budget, transportation, accommodation, meals, activities, miscellaneous,
+          alerts_enabled, timestamps)  DECIMAL(12,2); CHECK all amounts >= 0
+  expenses(id, trip_id FK, user_id FK, category ENUM(transportation, accommodation, meals, activities, miscellaneous),
+           description, amount DECIMAL(12,2) CHECK >= 0, expense_date, timestamps)
+  itineraries(id, trip_id UNIQUE FK, timestamps)
+  itinerary_activities(id, itinerary_id FK, day_number, activity_time CHAR(5) "HH:MM", title, planned_cost, sort_order)
+  Deleting a trip cascades to its budget, expenses, itinerary and activities.
+
+Validation (backend/src/common/validation.py): money must be a finite non-negative number up to 99,999,999.99 and is rounded to 2 decimals; text fields are trimmed and length-limited; times must be HH:MM; categories must be one of the five listed; unknown body fields are ignored.
+
+Seed data: database/seed/V900__seed_test_data.sql creates fake users (demo.user@example.com, demo.admin@example.com), 3 trips, budgets, expenses and activities. It is loaded only if the migrate Lambda is invoked with {"include_seed": true}. Do not load it into a database used for a real demo.
+
+Large asset: frontend/src/assets/screenrecord.mp4 (about 62 MB) is not in Git. See DATA_README.md.
+
+
+6. IMPLEMENTATION DETAILS
+-------------------------
+Backend modules
+  app.py: route table (19 routes), 404 for unknown path, 405 for wrong method, OPTIONS handled, database connection errors map to 503 and reset the cached connection, one JSON log line per request.
+  common/auth.py: reads claims from event.requestContext.authorizer.jwt.claims; parses cognito:groups (HTTP API renders arrays as "[admins other]"); is_admin(); current_user() upserts the users row.
+  common/db.py: one PyMySQL connection reused across warm invocations, ping before reuse, autocommit on, query()/execute() helpers, transaction() context manager.
+  common/calculations.py: Decimal-based maths. threshold_status returns no_budget | ok | warning (>= 80%) | exceeded (>= 100%); crossed_threshold() returns the new level only when it got worse; build_summary() returns totals, per-category figures and planned-vs-actual.
+  common/validation.py, request.py, responses.py, errors.py: input checks, request wrapper (lazy current_user), JSON responses, ApiError.
+  common/report_builder.py: build_csv and build_pdf (hand-written minimal PDF, no third-party library). CSV cells beginning with = + - @ tab or CR are prefixed with an apostrophe to prevent spreadsheet formula injection.
+  common/alerts.py: SNS publish with subjects "Voyara: 80% of your trip budget used" and "Voyara: trip budget exceeded"; returns False on any failure.
+  common/aws.py: lazy boto3 clients; the SNS client has 2 s connect and 3 s read timeouts and one attempt so it fails fast inside a VPC without a route to SNS.
+  handlers/trips.py, budgets.py, expenses.py, itinerary.py, summary.py, reports.py, admin.py: the route handlers (see docs/API.md for each request and response).
+  handlers/migrate.py: separate Lambda that runs inside the VPC because RDS is private. It creates the database if missing, applies versioned V###__*.sql files once each (tracked in schema_migrations), and creates a least-privilege application user with SELECT, INSERT, UPDATE and DELETE only. A second run returns applied: [].
+
+Frontend
+  Routes (App.js): public /, /about, /contact, /learn-more, /signup, /login; protected /dashboard, /planner, /trip-created, /itinerary, /budget; /admin additionally requires the admins group (ProtectedRoute requireAdmin). The API enforces the admin rule independently.
+  Budget page: set total and category budgets, add and delete expenses, category breakdown, doughnut chart (spending by category) and bar chart (planned vs actual), recent expenses, CSV/PDF export. BudgetAlert shows the amber banner at 80% and the red banner at 100%.
+  budgetMath.js mirrors calculations.py for instant UI updates; the server is the source of truth.
+
+Infrastructure (infra/template.yaml, Transform AWS::Serverless-2016-10-31)
+  Parameters: DbHost, DbName, DbUser, DbPassword (NoEcho), MigrateDbUser, MigrateDbPassword (NoEcho), UserPoolId, UserPoolClientId, SubnetIds, LambdaSecurityGroupId, AllowedOrigins, AlertEmail.
+  Resources: HttpApi (CORS from AllowedOrigins, throttle 10 req/s burst 20, Cognito JWT default authorizer), ApiFunction (python3.12, arm64, VPC, IAM policy limited to s3:PutObject/GetObject on <bucket>/reports/* and sns:Publish on the one topic; routes ANY /{proxy+} and an unauthenticated OPTIONS /{proxy+}), MigrateFunction, ApiLogGroup and MigrateLogGroup (7-day retention), ReportsBucket (public access blocked, AES256, lifecycle expires reports/ after 30 days), AlertTopic, AlertSubscription (only if AlertEmail is set), LambdaErrorsAlarm (AWS/Lambda Errors >= 1 in 5 minutes), Api5xxAlarm (AWS/ApiGateway 5xx >= 1 in 5 minutes). Both alarms notify the topic.
+  Outputs: ApiUrl, ReportsBucketName, AlertTopicArn, MigrateFunctionName.
+
+Tests (as documented in docs/TESTING.md)
+  Backend: calculations (thresholds at 79.9 / 80 / 100%), validation, report builder, API + SQL integration against a real MySQL (CRUD, cascade delete, cross-user 404 on every route, body fields cannot change identity or role, SQL-injection text stored literally, itinerary save is atomic, SNS sent once per threshold crossing, report keys under the caller's prefix, admin 403 for normal users, migrator idempotent, app DB user cannot DROP TABLE).
+  Frontend: budget maths, API client, pages, route guards.
+
+
+7. CONFIGURATION AND ENVIRONMENT
+--------------------------------
+Frontend (frontend/.env.local, created from .env.example; these values are public in the browser bundle)
+  REACT_APP_API_URL
+  REACT_APP_COGNITO_USER_POOL_ID
+  REACT_APP_COGNITO_CLIENT_ID
+
+Lambda environment (set by the SAM template)
+  DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, REPORT_BUCKET, ALERT_TOPIC_ARN. MigrateFunction also gets APP_DB_USER and APP_DB_PASSWORD. DB_PORT and DB_CONNECT_TIMEOUT are optional.
+
+Local backend tests (backend/.env.example)
+  TEST_DB_HOST, TEST_DB_PORT, TEST_DB_USER, TEST_DB_PASSWORD
+
+Reporting script
+  DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, REPORT_BUCKET
+
+Secrets that are NOT in the repository and must be saved separately
+  - RDS master username and password.
+  - The application DB password. setup_aws.sh generates it, passes it to the stack and does not print it; to know it, set your own with --parameter-overrides DbPassword=... or reset it with the migrate function.
+  - frontend/.env.local (can be regenerated from the stack outputs and Cognito ids).
+  - AWS access keys for the CLI user.
+Only .env.example files with placeholders are committed.
+
+Cognito
+  User pool with email as username, email auto-verification, required attributes email and name, password policy as above. App client without a secret, flows ALLOW_USER_SRP_AUTH and ALLOW_REFRESH_TOKEN_AUTH, 1-hour ID/access tokens, 1-day refresh token. Group "admins".
+
+Database setup: not manual. The migrate Lambda creates the database, tables and the low-privilege app user.
+
+
+8. SETUP AND RUN GUIDE (FROM A FRESH CLONE)
+-------------------------------------------
+Prerequisites
+  - An AWS account and an IAM user (not root) configured with: aws configure --profile voyara
+  - AWS CLI v2, AWS SAM CLI, Node 20, Python 3.12, Git Bash or another bash.
+  - An existing RDS MySQL instance in ap-south-1 (the script reads its settings and never creates RDS). Single-AZ db.t4g.micro with 20 GB storage is what the docs assume.
+  - Set a monthly AWS Budget first (docs/DEPLOYMENT.md, Step 2).
+
+Deploy
+  git clone https://github.com/kvlokeshkumar/voyara.git
+  cd voyara
+  export AWS_PROFILE=voyara
+  bash scripts/setup_aws.sh
+  The script: (1) checks you are not root, (2) asks for the RDS master user, password and your email, (3) reads the RDS endpoint, VPC, subnets and security group, (4) creates voyara-lambda-sg, adds the 3306 rule from it to the RDS security group, and creates the S3 gateway endpoint, (5) creates the Cognito pool "voyara-users", app client "voyara-web" and group "admins", (6) runs sam build and sam deploy for the stack "voyara-api", (7) invokes the migrate Lambda and writes frontend/.env.local. It is safe to run again.
+  Manual alternative: cd infra && sam build && sam deploy --guided, or follow docs/DEPLOYMENT.md.
+
+Run the frontend
+  cd frontend
+  npm install
+  npm start              # opens http://localhost:3000
+  The site needs RDS to be running. Place a screenrecord.mp4 at frontend/src/assets/ first (see DATA_README.md) or the build fails.
+
+Become admin: Cognito console -> the user pool -> the user -> Add user to group -> admins, then sign in again.
+
+Tests
+  cd backend && python -m venv .venv && source .venv/bin/activate && pip install -r requirements-dev.txt
+  docker run -d --name voyara-mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=localdev mysql:8.0
+  TEST_DB_PASSWORD=localdev pytest -v
+  cd frontend && CI=true npm test -- --watchAll=false
+  cd frontend && CI=true npm run build
+
+Seed data (optional): aws lambda invoke --function-name voyara-api-migrate --payload '{"include_seed": true}' --cli-binary-format raw-in-base64-out out.json
+Check the migration: aws lambda invoke --function-name voyara-api-migrate --payload '{}' --cli-binary-format raw-in-base64-out out.json (a second run reports applied: []).
+
+
+9. DEPLOYMENT AND USAGE
+-----------------------
+Typical use: sign up, confirm the emailed code, log in, create a trip in Planner (origin, destination, dates, travellers, optional budget), open Budget to set category budgets and add expenses, open Itinerary to plan activities per day, open Dashboard for totals, export CSV or PDF from Budget.
+
+Example API call (after login, with the ID token):
+  POST /trips            {"from":"Chennai","to":"Bali","startDate":"2026-12-10","endDate":"2026-12-14","travelers":2,"budget":50000}
+  POST /trips/12/expenses {"category":"meals","description":"Welcome dinner","amount":3500.50,"date":"2026-12-10"}
+  -> 201 with the expense and a threshold object {status, percentUsed, totalSpent, remaining}
+Full reference: docs/API.md.
+
+Quick checks without logging in
+  curl -i <ApiUrl>/trips  -> HTTP 401 (the authorizer rejects it before Lambda runs).
+
+Hosting the website (optional, not in the template): build with npm run build, upload to a private S3 bucket, serve through CloudFront with Origin Access Control, map 403/404 to /index.html with status 200 so deep links work, and add the https origin to the AllowedOrigins stack parameter.
+
+Cost and cleanup: docs/COST_AND_CLEANUP.md. RDS is the main cost; stop it when idle (AWS restarts a stopped instance after 7 days). Storage and backups still bill while it is stopped. The cleanup checklist lists every resource to delete.
+
+
+10. KNOWN BUGS, LIMITATIONS AND TODOS
+-------------------------------------
+- SNS from the Lambda: the function is in a VPC with no NAT Gateway and no SNS interface endpoint, so spending-alert emails are skipped (the call fails fast and is ignored). On-screen amber/red banners still work. CloudWatch alarm emails work because CloudWatch publishes to SNS itself.
+- DB credentials are passed to Lambda as encrypted environment variables rather than Secrets Manager, to avoid the hourly cost of a Secrets Manager endpoint. The app uses a separate low-privilege DB user.
+- RDS is single-AZ for cost reasons.
+- One Lambda with an internal router serves all routes, so IAM is per function, not per route.
+- Tokens live in sessionStorage; a new browser session requires login again.
+- CloudFront and the website bucket are not part of the SAM template.
+- frontend/README.md is the unmodified Create React App text.
+- The seed file is test data only.
+- Ideas: Secrets Manager or SSM Parameter Store, Multi-AZ, X-Ray tracing, WAF in front of the API, CI/CD pipeline, an S3 event trigger to a Lambda outside the VPC that sends the alert emails, a CloudWatch dashboard with custom metrics.
+
+
+11. DECISIONS AND GOTCHAS
+-------------------------
+- JWT authorizer on the proxy route, but OPTIONS must be unauthenticated. Otherwise the browser's CORS preflight gets 401 and the app shows "Cannot reach the server".
+- Identity comes only from verified token claims. Roles come from the Cognito group "admins", not from anything the client sends.
+- Other users' resources return 404 so ids are not revealed.
+- Money uses Decimal on the server and DECIMAL(12,2) in MySQL to avoid float errors.
+- PyMySQL treats queries as format strings, so a literal % in SQL must be written %% (see admin.py).
+- The migrate function exists because the private RDS cannot be reached from a laptop; it runs inside the VPC.
+- The migration SQL is duplicated in database/ and backend/src/migrations/ (the Lambda package only contains backend/src). A test fails if they differ.
+- Pass database passwords to sam deploy with --parameter-overrides; never write them in samconfig.toml.
+- If a corporate or antivirus tool intercepts HTTPS, the AWS CLI can fail with CERTIFICATE_VERIFY_FAILED. Point AWS_CA_BUNDLE (and NODE_EXTRA_CA_CERTS / REQUESTS_CA_BUNDLE) at that tool's root certificate file instead of disabling verification.
+- Git Bash rewrites arguments that start with "/" ; setup_aws.sh sets MSYS_NO_PATHCONV=1 for that reason.
+
+
+12. OPEN QUESTIONS
+------------------
+- What the Learn More demo video (screenrecord.mp4) contains is not recorded in the repository; only that LearnMore.js imports and plays it.
+- No licence file is present.
+- The exact CloudFront distribution settings are described in docs/DEPLOYMENT.md but were not applied in the author's deployment, so they are untested here.
+- The test counts above are the recorded results in docs/TESTING.md; they were not re-run when this file was written.
