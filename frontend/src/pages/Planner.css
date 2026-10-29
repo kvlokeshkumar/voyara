@@ -1,0 +1,101 @@
+/* Centering Logic */
+.planner-page-layout {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f8f6f2; /* Soft warm background */
+  padding: 40px 20px;
+  box-sizing: border-box;
+}
+
+.planner-card {
+  background: white;
+  padding: 50px;
+  border-radius: 30px;
+  max-width: 750px;
+  width: 100%;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.04);
+  text-align: center;
+}
+
+/* Typography */
+.planner-title {
+  font-family: 'Georgia', serif;
+  font-size: 2.8rem;
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+
+.planner-subtitle {
+  color: #7f8c8d;
+  font-size: 1.1rem;
+  margin-bottom: 40px;
+}
+
+/* Form Layout */
+.planner-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+  text-align: left;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.field label {
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #34495e;
+  font-size: 0.95rem;
+}
+
+/* Input Styling */
+.field input, .field textarea {
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: none;
+  background-color: #edeae4; /* Beige background */
+  font-size: 1rem;
+  color: #2c3e50;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.field input:focus, .field textarea:focus {
+  background-color: #e5e2db;
+  box-shadow: inset 0 0 0 2px #9dbbb8;
+}
+
+/* Full Width for Notes */
+.full {
+  grid-column: span 2;
+  margin-top: 10px;
+}
+
+/* Sage Green Button */
+.plan-btn {
+  width: 100%;
+  margin-top: 40px;
+  padding: 18px;
+  background-color: #9dbbb8; /* Sage green */
+  color: #1a2e35;
+  border: none;
+  border-radius: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.plan-btn:hover {
+  background-color: #8ba8a5;
+  transform: translateY(-2px);
+}
+
+.plan-btn:active {
+  transform: translateY(0);
+}

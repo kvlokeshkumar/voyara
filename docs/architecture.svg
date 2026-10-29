@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 560" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#444"/></marker>
+    <style>.b{fill:#fff;stroke:#444;stroke-width:1.5;rx:8}.t{text-anchor:middle;fill:#222}.s{fill:#666;font-size:11px;text-anchor:middle}.l{stroke:#444;stroke-width:1.5;fill:none;marker-end:url(#a)}.v{fill:#f3f8f5;stroke:#81b29a;stroke-width:2;stroke-dasharray:6 4;rx:12}.p{fill:#fdf1ec;stroke:#e07a5f;stroke-width:1.5;rx:8}</style>
+  </defs>
+  <rect width="980" height="560" fill="#fafafa"/>
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <text x="490" y="28" class="t" font-size="18" font-weight="bold">Voyara on AWS (ap-south-1)</text>
+
+  <rect class="b" x="30" y="90" width="120" height="60"/><text x="90" y="116" class="t">Browser</text><text x="90" y="134" class="s">React SPA</text>
+  <rect class="b" x="200" y="40" width="140" height="60"/><text x="270" y="66" class="t">CloudFront</text><text x="270" y="84" class="s">HTTPS, SPA fallback</text>
+  <rect class="b" x="200" y="140" width="140" height="60"/><text x="270" y="166" class="t">S3 (website)</text><text x="270" y="184" class="s">private, via OAC</text>
+  <rect class="b" x="200" y="240" width="140" height="60"/><text x="270" y="266" class="t">Cognito</text><text x="270" y="284" class="s">users, admins group, JWT</text>
+  <rect class="b" x="400" y="170" width="150" height="70"/><text x="475" y="196" class="t">API Gateway</text><text x="475" y="213" class="s">HTTP API + JWT authorizer</text><text x="475" y="227" class="s">throttling, CORS</text>
+
+  <rect class="v" x="600" y="70" width="350" height="330"/><text x="775" y="92" class="t" font-weight="bold">VPC (private subnets, no NAT)</text>
+  <rect class="p" x="630" y="115" width="140" height="70"/><text x="700" y="140" class="t">Lambda API</text><text x="700" y="157" class="s">Python 3.12, IAM role</text><text x="700" y="171" class="s">least privilege</text>
+  <rect class="p" x="800" y="115" width="130" height="70"/><text x="865" y="140" class="t">Lambda migrate</text><text x="865" y="157" class="s">schema + app user</text>
+  <rect class="b" x="700" y="240" width="170" height="70"/><text x="785" y="266" class="t">RDS MySQL</text><text x="785" y="283" class="s">single-AZ, not public</text><text x="785" y="297" class="s">SG: 3306 from Lambda SG</text>
+  <rect class="b" x="640" y="335" width="130" height="45"/><text x="705" y="354" class="t">S3 gateway</text><text x="705" y="369" class="s">endpoint (free)</text>
+  <rect class="b" x="800" y="335" width="130" height="45"/><text x="865" y="354" class="t">(optional) SNS</text><text x="865" y="369" class="s">interface endpoint</text>
+
+  <rect class="b" x="400" y="430" width="140" height="60"/><text x="470" y="456" class="t">S3 (reports)</text><text x="470" y="474" class="s">CSV/PDF, SSE, 30-day expiry</text>
+  <rect class="b" x="590" y="430" width="120" height="60"/><text x="650" y="456" class="t">SNS topic</text><text x="650" y="474" class="s">80% / 100% email</text>
+  <rect class="b" x="30" y="430" width="150" height="60"/><text x="105" y="456" class="t">CloudWatch</text><text x="105" y="474" class="s">logs, alarms (7-day)</text>
+  <rect class="b" x="220" y="430" width="140" height="60"/><text x="290" y="456" class="t">AWS Budgets</text><text x="290" y="474" class="s">billing alerts</text>
+  <rect class="b" x="760" y="430" width="190" height="60"/><text x="855" y="456" class="t">(optional) EC2 t4g.nano</text><text x="855" y="474" class="s">reports to S3, reads RDS</text>
+
+  
+  
+  
+  
+  
+  
+  
+  <text x="170" y="170" class="s" transform="rotate(14 170 170)">ID token (JWT)</text>
+  <path class="l" d="M150 110 L200 75"/>
+  <path class="l" d="M270 100 L270 140"/>
+  <path class="l" d="M150 130 L200 265"/>
+  <path class="l" d="M340 255 L400 215" stroke-dasharray="4 3"/>
+  <path class="l" d="M150 125 L400 195"/>
+  <path class="l" d="M550 205 L630 150"/>
+  <path class="l" d="M700 185 L760 240"/>
+  <path class="l" d="M865 185 L820 240"/>
+  <path class="l" d="M670 185 L705 335"/>
+  <path class="l" d="M705 380 L520 430"/>
+  <path class="l" d="M865 380 L690 430" stroke-dasharray="4 3"/>
+  <path class="l" d="M855 430 L800 310" stroke-dasharray="4 3"/>
+  <path class="l" d="M740 185 L835 335" stroke-dasharray="4 3"/>
+</svg>

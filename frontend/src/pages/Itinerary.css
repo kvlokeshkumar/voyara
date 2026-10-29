@@ -1,0 +1,99 @@
+/* Layout & Centering */
+.planner-wrapper {
+  background: #f8f6f2;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 100px;
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.itinerary-container { 
+  width: 1100px; 
+  padding: 20px; 
+}
+
+/* Header Elements */
+.top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+.top-bar h1 { color: #1e3a5f; margin: 0; font-size: 2.2rem; }
+.btn-text-only { background: none; border: none; color: #e53e3e; cursor: pointer; font-weight: 700; font-size: 0.9rem; }
+
+/* Itinerary Actions */
+.itinerary-actions { display: flex; gap: 12px; }
+.btn-save, .btn-load { 
+  padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; 
+  font-weight: 600; font-size: 0.9rem; transition: background 0.3s;
+}
+.btn-save { background: #3498db; color: white; }
+.btn-save:hover { background: #2980b9; }
+.btn-load { background: #27ae60; color: white; }
+.btn-load:hover { background: #229954; }
+
+/* Navigation Tabs */
+.day-nav { display: flex; gap: 12px; justify-content: center; margin-bottom: 30px; }
+.day-tab { 
+  padding: 10px 22px; 
+  border-radius: 10px; 
+  border: 1.5px solid #9fb1b0; 
+  background: #fff; 
+  color: #9fb1b0; 
+  cursor: pointer; 
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.day-tab.active { background: #9fb1b0; color: #fff; box-shadow: 0 4px 12px rgba(159, 177, 176, 0.3); }
+
+/* The Main Big White Box */
+.main-white-box {
+  background: #fff;
+  border-radius: 28px;
+  display: flex;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+  min-height: 550px;
+  overflow: hidden;
+}
+
+.side { flex: 1; padding: 50px; }
+.list-side { border-right: 1px solid #f8f6f2; }
+
+/* List Content Styling */
+.side-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+.side-header h2 { margin: 0; color: #1e3a5f; }
+.price-tag { color: #27ae60; font-weight: 800; background: #eefaf3; padding: 6px 16px; border-radius: 20px; font-size: 1.1rem; }
+
+.row { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid #f8f6f2; }
+.row-info { display: flex; flex-direction: column; }
+.row-time { font-size: 0.75rem; font-weight: 800; color: #9fb1b0; text-transform: uppercase; }
+.row-name { font-weight: 600; color: #2d3436; font-size: 1.1rem; }
+.row-cost { font-weight: 700; color: #4a5568; }
+
+/* Form Styling */
+.form-side h3 { margin-top: 0; margin-bottom: 30px; color: #1e3a5f; }
+.field { margin-bottom: 20px; }
+label { display: block; font-size: 0.75rem; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 8px; }
+
+input { 
+  width: 100%; padding: 16px; 
+  background: #efedeb; border: none; border-radius: 12px; 
+  font-size: 1rem; font-family: inherit; box-sizing: border-box;
+}
+
+.row-input { display: flex; gap: 20px; }
+.row-input .field { flex: 1; }
+
+.btn-main { 
+  width: 100%; padding: 18px; 
+  background: #9fb1b0; color: #fff; border: none; border-radius: 12px; 
+  cursor: pointer; font-weight: 700; font-size: 1.1rem; margin-top: 15px;
+}
+
+/* Bottom Summary Action */
+.bottom-nav { text-align: center; margin-top: 30px; }
+.btn-outline { 
+  background: white; border: 1.5px solid #e2e8f0; 
+  padding: 12px 30px; border-radius: 25px; 
+  color: #718096; cursor: pointer; font-weight: 600;
+}
+
+.placeholder-text { color: #a0aec0; text-align: center; margin-top: 50px; font-style: italic; }

@@ -1,0 +1,135 @@
+.summary-container {
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.summary-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: #9fb1b0;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: color 0.2s;
+}
+
+.btn-back:hover {
+  color: #1e3a5f;
+}
+
+.summary-header h1 {
+  color: #1e3a5f;
+  font-size: 2.2rem;
+  margin-bottom: 10px;
+}
+
+.overall-budget {
+  background: #ffffff;
+  display: inline-block;
+  padding: 10px 25px;
+  border-radius: 99px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.grand-total {
+  color: #27ae60;
+  margin-left: 10px;
+  font-size: 1.2rem;
+}
+
+.summary-card-main {
+  background: #ffffff;
+  padding: 50px;
+  border-radius: 24px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+}
+
+.summary-day-section {
+  margin-bottom: 40px;
+}
+
+.day-title-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.day-title-row h3 {
+  color: #1e3a5f;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.day-title-row hr {
+  flex-grow: 1;
+  border: none;
+  border-top: 2px solid #f8f6f2;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #f8f6f2;
+}
+
+.item-left {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.item-time {
+  font-weight: 700;
+  color: #9fb1b0;
+  font-size: 0.9rem;
+  width: 60px;
+}
+
+.item-name {
+  color: #2d3436;
+  font-weight: 500;
+}
+
+.item-price {
+  color: #4a5568;
+  font-weight: 600;
+}
+
+/* Footer */
+.summary-footer {
+  text-align: center;
+  margin-top: 40px;
+}
+
+.btn-download {
+  background-color: #1e3a5f;
+  color: white;
+  padding: 12px 30px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.footer-tag {
+  font-size: 0.75rem;
+  color: #a0aec0;
+  letter-spacing: 1px;
+}
+
+@media print {
+  .btn-back, .btn-download { display: none; }
+  .planner-page-layout { background: white; padding: 0; }
+  .summary-card-main { box-shadow: none; border: 1px solid #eee; }
+}

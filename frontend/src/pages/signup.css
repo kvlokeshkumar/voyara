@@ -1,0 +1,73 @@
+.signup-card {
+  background-color: #fff5f2; /* Light peach tint from original image */
+  padding: 50px;
+  border-radius: 40px;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+}
+
+.auth-title {
+  font-family: serif;
+  font-size: 2.2rem;
+  color: #1a2e35;
+  margin-bottom: 5px;
+}
+
+.auth-subtitle {
+  color: #6a7a7e;
+  font-size: 0.9rem;
+  margin-bottom: 30px;
+}
+
+.error {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.auth-form-group {
+  text-align: left;
+  margin-bottom: 18px;
+}
+
+.auth-form-group label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #1a2e35;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background-color: #f1f4f5;
+  box-sizing: border-box; /* Fixes alignment */
+}
+
+/* THE ORIGINAL PEACH PILL BUTTON */
+.signup-submit-btn {
+  width: 100%;
+  padding: 16px;
+  background-color: #fddbd1; /* Specific peach color */
+  color: #1a2e35;
+  border: none;
+  border-radius: 50px; /* Makes it a pill */
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.auth-link {
+  color: #c88a5e;
+  font-weight: 700;
+  text-decoration: none;
+}

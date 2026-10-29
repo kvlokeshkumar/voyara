@@ -1,0 +1,9 @@
+# Copy to samconfig.toml (git-ignored). Do NOT put passwords in this file; pass them with --parameter-overrides.
+version = 0.1
+[default.global.parameters]
+stack_name = "voyara-api"
+region = "ap-south-1"
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+resolve_s3 = true
+confirm_changeset = true

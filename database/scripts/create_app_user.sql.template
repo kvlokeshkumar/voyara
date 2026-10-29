@@ -1,0 +1,5 @@
+-- Run ONCE as the RDS master user, after replacing the password.
+-- The API Lambda then connects as voyara_app, which cannot alter or drop tables.
+CREATE USER IF NOT EXISTS 'voyara_app'@'%' IDENTIFIED BY 'REPLACE_WITH_A_STRONG_PASSWORD';
+GRANT SELECT, INSERT, UPDATE, DELETE ON voyara.* TO 'voyara_app'@'%';
+FLUSH PRIVILEGES;

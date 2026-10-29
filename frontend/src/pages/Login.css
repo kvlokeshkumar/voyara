@@ -1,0 +1,78 @@
+.login-card {
+  background-color: #f0f7f7; /* Light sage tint */
+  padding: 50px;
+  border-radius: 40px;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+}
+
+.auth-title {
+  font-family: serif;
+  font-size: 2.2rem;
+  color: #1a2e35;
+  margin-bottom: 5px;
+}
+
+.auth-subtitle {
+  color: #6a7a7e;
+  font-size: 0.9rem;
+  margin-bottom: 30px;
+}
+
+.error {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.auth-form-group {
+  text-align: left;
+  margin-bottom: 18px;
+}
+
+.auth-form-group label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #1a2e35;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background-color: #f1f4f5;
+  box-sizing: border-box;
+}
+
+/* THE ORIGINAL SAGE PILL BUTTON */
+.login-submit-btn {
+  width: 100%;
+  padding: 16px;
+  background-color: #adcac9; /* Specific sage green */
+  color: #1a2e35;
+  border: none;
+  border-radius: 50px; /* Makes it a pill */
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.auth-footer {
+  color: #6a7a7e;
+  font-size: 0.9rem;
+  margin-top: 20px;
+}
+
+.auth-link {
+  color: #5a8a85;
+  font-weight: 700;
+  text-decoration: none;
+}

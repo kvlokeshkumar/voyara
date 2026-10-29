@@ -1,0 +1,221 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Voyara - HTTP API + Python Lambda + private RDS MySQL access + S3 reports + SNS alerts
+
+Parameters:
+  DbHost:
+    Type: String
+    Description: RDS endpoint hostname (the database you already created)
+  DbName:
+    Type: String
+    Default: voyara
+  DbUser:
+    Type: String
+    Default: voyara_app
+    Description: Least-privilege application DB user (see database/scripts/create_app_user.sql.template)
+  DbPassword:
+    Type: String
+    NoEcho: true
+  MigrateDbUser:
+    Type: String
+    Default: admin
+    Description: RDS master user, used ONLY by the migrate function
+  MigrateDbPassword:
+    Type: String
+    NoEcho: true
+  UserPoolId:
+    Type: String
+    Description: Cognito user pool id, e.g. ap-south-1_AbCdEf123
+  UserPoolClientId:
+    Type: String
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Private subnets in the SAME VPC as RDS (at least 2 AZs recommended)
+  LambdaSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: SG for Lambda. The RDS security group must allow 3306 from this SG.
+  AllowedOrigins:
+    Type: CommaDelimitedList
+    Default: "http://localhost:3000"
+    Description: Comma-separated browser origins allowed by CORS (add your CloudFront https URL)
+  AlertEmail:
+    Type: String
+    Default: ""
+    Description: Optional. Email for SNS spending alerts and CloudWatch alarms
+
+Conditions:
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, ""]]
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Architectures: [arm64]
+    Timeout: 15
+    MemorySize: 256
+    VpcConfig:
+      SecurityGroupIds: [!Ref LambdaSecurityGroupId]
+      SubnetIds: !Ref SubnetIds
+    Environment:
+      Variables:
+        DB_HOST: !Ref DbHost
+        DB_NAME: !Ref DbName
+        DB_USER: !Ref DbUser
+        DB_PASSWORD: !Ref DbPassword
+        REPORT_BUCKET: !Ref ReportsBucket
+        ALERT_TOPIC_ARN: !Ref AlertTopic
+
+Resources:
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins: !Ref AllowedOrigins
+        AllowHeaders: [Authorization, Content-Type]
+        AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
+        MaxAge: 600
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
+      Auth:
+        DefaultAuthorizer: CognitoJwt
+        Authorizers:
+          CognitoJwt:
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}
+              audience:
+                - !Ref UserPoolClientId
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-api
+      CodeUri: ../backend/src/
+      Handler: app.lambda_handler
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: [s3:PutObject, s3:GetObject]
+              Resource: !Sub ${ReportsBucket.Arn}/reports/*
+            - Effect: Allow
+              Action: sns:Publish
+              Resource: !Ref AlertTopic
+      Events:
+        Proxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: ANY
+        Preflight:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: OPTIONS
+            Auth:
+              Authorizer: NONE
+
+  MigrateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-migrate
+      CodeUri: ../backend/src/
+      Handler: handlers.migrate.lambda_handler
+      Timeout: 120
+      Environment:
+        Variables:
+          DB_USER: !Ref MigrateDbUser
+          DB_PASSWORD: !Ref MigrateDbPassword
+          APP_DB_USER: !Ref DbUser
+          APP_DB_PASSWORD: !Ref DbPassword
+
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-api
+      RetentionInDays: 7
+
+  MigrateLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-migrate
+      RetentionInDays: 7
+
+  ReportsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-reports
+            Status: Enabled
+            Prefix: reports/
+            ExpirationInDays: 30
+
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: Voyara alerts
+
+  AlertSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail
+    Properties:
+      TopicArn: !Ref AlertTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  LambdaErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: API Lambda reported errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ApiFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlertTopic]
+
+  Api5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: API Gateway returned 5xx responses
+      Namespace: AWS/ApiGateway
+      MetricName: 5xx
+      Dimensions:
+        - Name: ApiId
+          Value: !Ref HttpApi
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlertTopic]
+
+Outputs:
+  ApiUrl:
+    Description: Put this in REACT_APP_API_URL
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com
+  ReportsBucketName:
+    Value: !Ref ReportsBucket
+  AlertTopicArn:
+    Value: !Ref AlertTopic
+  MigrateFunctionName:
+    Value: !Ref MigrateFunction

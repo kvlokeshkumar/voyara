@@ -1,0 +1,27 @@
+# dependencies and build output
+node_modules/
+build/
+.aws-sam/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+coverage/
+
+# secrets and local config
+infra/.secrets/
+infra/samconfig.toml
+.env
+.env.local
+.env.*.local
+*.pem
+out.json
+
+# large media (see DATA_README.md)
+frontend/src/assets/screenrecord.mp4
+
+# editor, OS, logs
+.DS_Store
+.idea/
+.vscode/
+npm-debug.log*

@@ -1,0 +1,19 @@
+/* Additions for the cloud version. Existing page stylesheets are unchanged. */
+.v-status { text-align: center; padding: 48px 16px; color: #555; }
+.v-status-error { color: #a4262c; }
+.v-spinner { width: 34px; height: 34px; margin: 0 auto 12px; border: 4px solid #ddd; border-top-color: #e07a5f; border-radius: 50%; animation: v-spin 0.9s linear infinite; }
+@keyframes v-spin { to { transform: rotate(360deg); } }
+.v-retry { margin-top: 8px; padding: 8px 18px; border: 0; border-radius: 8px; background: #e07a5f; color: #fff; cursor: pointer; }
+.v-notice { margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: 0.95rem; }
+.v-notice-info { background: #e8f3ee; color: #1f5f45; }
+.v-notice-error { background: #fdecea; color: #a4262c; }
+.v-alert { margin: 12px 0; padding: 12px 16px; border-radius: 10px; font-weight: 600; }
+.v-alert-warn { background: #fff4d6; color: #7a5a00; border: 1px solid #f2cc8f; }
+.v-alert-danger { background: #fdecea; color: #a4262c; border: 1px solid #f5b5b0; }
+.v-chart { max-width: 420px; margin: 12px auto; }
+.v-chart-empty { text-align: center; color: #777; }
+.v-charts-row { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; }
+.v-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0; }
+.v-actions button { padding: 8px 16px; border-radius: 8px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+.v-toggle { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.v-link-btn { background: none; border: 0; color: inherit; cursor: pointer; font: inherit; padding: 0; }
